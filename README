@@ -15,8 +15,8 @@ permit the get.gps program to run once again.
 
 So a test cycle runs like this:
 
-$ ./get.gps
 $ ./setup.gps
+$ ./get.gps
 
 I place these files on the gps itself so that I can have an inplace backup.
 
