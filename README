@@ -20,4 +20,14 @@ $ ./setup.gps
 
 I place these files on the gps itself so that I can have an inplace backup.
 
+How I installed this on the WBT202 GPS device:
 
+$ cd '/Volumes/NO NAME'
+$ git clone file:///Users/gwood/Documents/Stanford-iPhone/Winter-2010/Depot/WBT-202_utility
+
+Now we have a true copy of the directory that can be 'pulled' when updates are needed.
+
+$ cd WBT-202_utility
+$ git pull
+
+I make changes in the original files on disk and then pull them to the GPS device.
