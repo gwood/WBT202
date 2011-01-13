@@ -1,0 +1,23 @@
+README
+
+George Wood
+2011-01-13
+
+This code is a derivative of the code found at
+
+git clone git://gist.github.com/538348.git
+
+The code herein halts at the first error.  Typically the code will
+resume at that point once the error is repaired. 
+
+A setup.gps program is provided to copy back the data to the source to
+permit the get.gps program to run once again.
+
+So a test cycle runs like this:
+
+$ ./get.gps
+$ ./setup.gps
+
+I place these files on the gps itself so that I can have an inplace backup.
+
+

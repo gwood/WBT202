@@ -1,0 +1,203 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+$|++;
+
+my $HOME = glob "~";
+#                 ~/Pictures/My Lightroom Photos/Wintec202/WBT202/20110112/17_31_57.TES
+my $OUTDIR = "$HOME/Pictures/My Lightroom Photos/Wintec202/WBT202";
+
+# For each file in glob "/Volumes/NO\\ NAME/WBT202/20*/*.TES";
+# Parse directory and basename
+# Copy the TES files to  $INPUTDIR/$date/$time.TES
+# Convert to gpx $OUTDIR/$date/$time.gpx
+# Convert to kpl $OUTDIR/$date/$time.kpl
+
+find_gps("/Volumes/NO NAME/WBT202");
+
+# If files are found they look like this pattern for the next 90 years...
+my $glob_for_TES = "/Volumes/NO\\ NAME/WBT202/20*/*.TES";
+my @files = glob $glob_for_TES;
+#print STDOUT "GPS file in " . (-s "\'$_\'") . " $_\n" for @files;
+print STDOUT "GPS file in $_\n" for @files;
+
+my %dir; # So we can remove empty directories...
+foreach my $file (@files) {
+
+    if ($file =~         m|\A(/Volumes/NO\ NAME/WBT202/(\d\d\d\d)(\d\d)(\d\d))/(\d\d)_(\d\d)_(\d\d).TES\z|) {
+	$dir{                 $1} = 1; 
+	my ($year,$month,$day,$hour,$minute,$second) = ($2,       $3,   $4,     $5,    $6,    $7);
+
+	my                        $OUTDIR_DATE = "$OUTDIR/$year$month$day";
+	my                                            $time = "${hour}_${minute}_${second}";
+	print STDOUT "OUTDIR_DATE=$OUTDIR_DATE   time=$time\n";
+
+	make_destination_directory(    $OUTDIR_DATE);
+	copy_tes(      $file,         "$OUTDIR_DATE/$time.TES");
+
+	# Use the Hard Disk file copy for faster conversions...
+	my             $copied_file = "$OUTDIR_DATE/$time.TES";
+	convert_to_gpx($copied_file,  "$OUTDIR_DATE/$time.gpx");
+	convert_to_kml($copied_file,  "$OUTDIR_DATE/$time.kml");
+
+	unlink_input(  $file);
+    }
+}
+
+cleanup_empty_directories(keys %dir);
+
+if (! @files) {
+    print STDOUT "No TES files found on $glob_for_TES\n";
+}
+
+exit 0;
+
+sub cleanup_empty_directories {
+    my (@dirs) = @_;
+
+    foreach my $dir (@dirs) {
+	if (empty_directory($dir)) {
+	    print STDOUT "Directory \'$dir\' is empty\n";
+	    print STDOUT "rmdir \'$dir\'\n";
+	    rmdir $dir || warn "Could not remove \'$dir\'\n";
+	} 
+    }
+}
+
+sub cmd {
+    my ($cmd) = @_;
+
+    print STDOUT "$cmd\n";
+    print STDOUT `$cmd`;
+    if ($?) {
+	die "Could not execute $cmd: $!";
+    }
+}
+
+sub convert_to_gpx {
+    my ($in, $out) = @_;
+
+    unlink_empty($out);
+    # Create if does not exist
+    if (!-e $out) {
+	#    gpsbabel -i wintec_tes -f '/Volumes/NO\ NAME/WBT202/20110112/17_31_57.TES' -o gpx -F 'out.gpx'
+	cmd("gpsbabel -i wintec_tes -f \'$in\' -o gpx -F \'$out\'");
+    }
+    die_if_not_positive_length($out);
+}
+
+sub convert_to_kml {
+    my ($in, $out) = @_;
+
+    unlink_empty($out);
+    if (!-e $out) {
+	cmd("gpsbabel -i wintec_tes -f \'$in\' -o kml -F \'$out\'");
+    }
+    die_if_not_positive_length($out);
+}
+
+sub copy_tes {
+    my ($in, $out) = @_;
+
+    unlink_empty($out);
+    # Create if does not exist
+    if (!-e $out) {
+	cmd("cp \'$in\' \'$out\'");
+    }
+    die_if_not_positive_length($out);
+}
+
+sub die_if_not_positive_length {
+    my ($file) = @_;
+
+    if (!-e $file
+	||
+	-z _) {
+	die "Did not properly create positive length $file\n";
+    }
+}
+
+sub empty_directory {
+    my ($dir) = @_;
+
+    opendir(DIR,$dir) || die "Could not open $dir: $!";
+    my $count;
+    while(readdir(DIR)) {
+	$count++;
+    }
+    closedir(DIR) || die "Could not close $dir: $!";
+    return ($count == 2) ? 1 : 0;
+}
+
+sub find_gps {
+    my ($device) = @_;
+
+    # The device has this signature in its directory...
+    if (-d $device) {
+	print STDOUT "Found the GPS device in $device\n";
+    }
+    else {
+	die "Must plug in $device USB cable and then turn off power switch (0/1) to enable USB mode so that satellites LED is OFF\n";
+    }
+}
+
+sub make_destination_directory {
+    my ($dir) = @_;
+
+    if (! -d $dir) {
+	print STDOUT "mkdir '$dir'\n";
+	mkdir $dir || die "Could not make_destination_directory '$dir'\n";
+    }
+    else {
+	print STDOUT "\'$dir\' already exists\n";
+	print STDOUT `/bin/ls -ladtr \'$dir\'` . "\n";
+    }
+    if (! -d $dir) {
+	die "Could not create directory \'$dir\'\n";
+    }
+}
+
+sub unlink_empty {
+    my ($file) = @_;
+
+    if (-z $file) {
+	print STDOUT "unlink $file";
+	unlink $file || die "Could not unlink $file: $!";
+    }	    
+}
+
+sub unlink_input {
+    my ($file) = @_;
+
+    print STDOUT "unlink $file\n";
+    unlink $file;
+    if (-f $file) {
+	warn "Could not unlink $file\n";
+    }
+}
+
+
+
+__END__
+From gpsbabel-1.4.2.pdf
+The Formats
+Pg 122
+---------------------
+Wintec TES file (wintec_tes)
+This format can...
+• read waypoints
+• read tracks
+This format supports Wintec .tec files, such as appear on the Wintec WBT-202™ data logger.
+The WinTec WBT-202 stores tracks and waypoints on an internal MICRO-SD Memory card. The log files
+can be accessed by connecting to an USB host and setting the device into a mass storage device (MSD)
+mode. To enter this mode, attach it to the computer, then hold the power button until the GPS and Bluetooth
+LEDs go out. It will then behave like an USB Memory stick. and individual files containing your tracks
+will show up on the "disk" with names ending in .tes. You can use GPSBabel to read these files directly
+or copy them to your host computer.
+Note that this format is for the TES files on the GPS, it has no relationship to the .TK2 files created by
+Wintec's Time Machine software for Windows.
+Despite the physical similarity to the Wintec WBT-201™, this is believed to be a rather different product.
+While this GPS probably works fine for realtime tracking over the bluetooth or serial lines (once you have
+appropriate serial drivers), it's expected to not work with GPSBabel's GPSBabel WBT Protocol module.
