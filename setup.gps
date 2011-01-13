@@ -2,6 +2,17 @@
 
 use strict;
 use warnings;
+# Pick up the code from the git repository on the device
+# You might change this to a local disk location to avoid reading the same spot again and again
+use lib "/Volumes/NO\ NAME/WBT-202_utility";
+use lib "/Usrs/gwood/Documents/Stanford-iPhone/Winter-2010/Depot/WBT-202_utility";
+use WBT202 qw(
+cleanup_empty_directories
+copy_tes
+find_gps
+make_destination_directory
+unlink_input
+);
 
 $|++;
 
@@ -21,7 +32,8 @@ my $HOME = glob "~";
 my $glob_for_TES = "$HOME/Pictures/My\\ Lightroom\\ Photos/Wintec202/WBT202/20110112/*.TES";
 my @files = glob $glob_for_TES;
 print STDOUT "GPS file in $_\n" for @files;
-my %dir;
+
+my %dir; # So we can remove empty directories...
 foreach my $file (@files) {
 	#            "$HOME/Pictures/My\\ Lightroom\\ Photos/Wintec202/WBT202/20110112/*.TES";
     if ($file =~ m|\A($HOME/Pictures/My\ Lightroom\ Photos/Wintec202/WBT202/(2011)(01)(12))/(\d\d)_(\d\d)_(\d\d).TES\z|) {
@@ -49,154 +61,3 @@ if (! @files) {
 }
 
 exit 0;
-
-sub cleanup_empty_directories {
-    my (@dirs) = @_;
-
-    foreach my $dir (@dirs) {
-	if (empty_directory($dir)) {
-	    print STDOUT "Directory \'$dir\' is empty\n";
-	    print STDOUT "rmdir \'$dir\'\n";
-	    rmdir $dir || warn "Could not remove \'$dir\'\n";
-	} 
-    }
-}
-
-sub cmd {
-    my ($cmd) = @_;
-
-    print STDOUT "$cmd\n";
-    print STDOUT `$cmd`;
-    if ($?) {
-	die "Could not execute $cmd: $!";
-    }
-}
-
-sub convert_to_gpx {
-    my ($in, $out) = @_;
-
-    unlink_empty($out);
-    # Create if does not exist
-    if (!-e $out) {
-	#    gpsbabel -i wintec_tes -f '/Volumes/NO\ NAME/WBT202/20110112/17_31_57.TES' -o gpx -F 'out.gpx'
-	cmd("gpsbabel -i wintec_tes -f \'$in\' -o gpx -F \'$out\'");
-    }
-    die_if_not_positive_length($out);
-}
-
-sub convert_to_kml {
-    my ($in, $out) = @_;
-
-    unlink_empty($out);
-    if (!-e $out) {
-	cmd("gpsbabel -i wintec_tes -f \'$in\' -o kml -F \'$out\'");
-    }
-    die_if_not_positive_length($out);
-}
-
-sub copy_tes {
-    my ($in, $out) = @_;
-
-    unlink_empty($out);
-    # Create if does not exist
-    if (!-e $out) {
-	cmd("cp \'$in\' \'$out\'");
-    }
-    die_if_not_positive_length($out);
-}
-
-sub die_if_not_positive_length {
-    my ($file) = @_;
-
-    if (!-e $file
-	||
-	-z _) {
-	die "Did not properly create positive length $file\n";
-    }
-}
-
-sub empty_directory {
-    my ($dir) = @_;
-
-    opendir(DIR,$dir) || die "Could not open \'$dir\': $!";
-    my $count;
-    while(readdir(DIR)) {
-	$count++;
-    }
-    closedir(DIR) || die "Could not close \'$dir\': $!";
-    return ($count == 2) ? 1 : 0;
-}
-
-sub find_gps {
-    my ($device) = @_;
-
-    # The device has this signature in its directory...
-    if (-d $device) {
-	print STDOUT "Found the GPS device in $device\n";
-    }
-    else {
-	die "Must plug in $device USB cable and then turn off power switch (0/1) to enable USB mode so that satellites LED is OFF\n";
-    }
-}
-
-sub make_destination_directory {
-    my ($dir) = @_;
-
-    if (! -d $dir) {
-	print STDOUT "mkdir '$dir'\n";
-	mkdir $dir || die "Could not make_destination_directory '$dir'\n";
-    }
-    else {
-	print STDOUT "\'$dir\' already exists\n";
-	print STDOUT `/bin/ls -ladtr \'$dir\'` . "\n";
-    }
-    if (! -d $dir) {
-	die "Could not create directory \'$dir\'\n";
-    }
-}
-
-sub unlink_empty {
-    my ($file) = @_;
-
-    if (-z $file) {
-	print STDOUT "unlink $file";
-	unlink $file || die "Could not unlink $file: $!";
-    }	    
-}
-
-sub unlink_input {
-    my ($file) = @_;
-
-    print STDOUT "unlink $file\n";
-    unlink $file;
-    if (-f $file) {
-	warn "Could not unlink $file\n";
-    } 
-    else {
-	#print STDOUT `/bin/ls -l \'$file\'`;
-    }   
-}
-
-
-
-__END__
-From gpsbabel-1.4.2.pdf
-The Formats
-Pg 122
----------------------
-Wintec TES file (wintec_tes)
-This format can...
-• read waypoints
-• read tracks
-This format supports Wintec .tec files, such as appear on the Wintec WBT-202™ data logger.
-The WinTec WBT-202 stores tracks and waypoints on an internal MICRO-SD Memory card. The log files
-can be accessed by connecting to an USB host and setting the device into a mass storage device (MSD)
-mode. To enter this mode, attach it to the computer, then hold the power button until the GPS and Bluetooth
-LEDs go out. It will then behave like an USB Memory stick. and individual files containing your tracks
-will show up on the "disk" with names ending in .tes. You can use GPSBabel to read these files directly
-or copy them to your host computer.
-Note that this format is for the TES files on the GPS, it has no relationship to the .TK2 files created by
-Wintec's Time Machine software for Windows.
-Despite the physical similarity to the Wintec WBT-201™, this is believed to be a rather different product.
-While this GPS probably works fine for realtime tracking over the bluetooth or serial lines (once you have
-appropriate serial drivers), it's expected to not work with GPSBabel's GPSBabel WBT Protocol module.
