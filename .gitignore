@@ -1,0 +1,28 @@
+# GitX is From http://stackoverflow.com/questions/456403/can-git-be-integrated-with-xcode
+# This .gitignore is From http://shanesbrain.net/2008/7/9/using-xcode-with-git
+# From Posted by shane on Wednesday, July 09
+
+# For Xcode and Git to work smoothly with each other, you need to make
+# sure Git treats Xcode project files properly. You do this by
+# configuring Git via .gitignore and .gitattributes. Create these files
+# in your repo’s root folder and add the following lines:
+
+# xcode noise
+/build/*
+*.pbxuser
+*.mode1v3
+
+# old skool
+.svn
+
+# osx noise
+.DS_Store
+profile
+
+# Another user: answered Jan 27 '09 at 17:10 Mark Thalman
+build/
+*.pyc
+*~.nib/
+*.pbxuser
+*.perspective
+*.perspectivev3

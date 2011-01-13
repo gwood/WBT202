@@ -1,0 +1,15 @@
+# GitX is From http://stackoverflow.com/questions/456403/can-git-be-integrated-with-xcode
+# This .gitignore is From http://shanesbrain.net/2008/7/9/using-xcode-with-git
+# From Posted by shane on Wednesday, July 09
+
+# The line in .gitattributes treats your Xcode project file as a
+# binary. This prevents Git from trying to fix newlines, show it in
+# diffs, and excludes it from merges. Note that you will still see it
+# shown as a conflict in merges, although the file won’t have
+# changed. Simply commit it and things should be good.
+
+# To prevent diff use this
+# *.pbxproj -crlf -diff -merge
+
+# To allow diff - use this.
+*.pbxproj -crlf -merge
